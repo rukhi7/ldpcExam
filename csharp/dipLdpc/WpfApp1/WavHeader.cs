@@ -78,7 +78,7 @@ namespace dipLdpc
 			// Размер заголовка
 			var headerSize = Marshal.SizeOf(header);
 
-			var fileStream = new FileStream(@"C:\distribs\Procyon\sxi8-tests-SXI8_SCRIPTS_V90\specs\helpers\audio\aac_audio.wav", FileMode.Open, FileAccess.Read);
+			var fileStream = new FileStream(@"C:\audio\aac_audio.wav", FileMode.Open, FileAccess.Read);
 			var buffer = new byte[headerSize];
 			fileStream.Read(buffer, 0, headerSize);
 

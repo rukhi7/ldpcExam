@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using System.Text;
 using System.Xml.Serialization;
 
 namespace dipLdpc
@@ -37,6 +35,13 @@ namespace dipLdpc
             string defaultPath = Directory.GetCurrentDirectory();
             try
             {
+                string fileName = "msgBodySaveOpts.xml";
+                if (!File.Exists(fileName))
+                {
+                    string resourceName = "msgBodySaveOpts";
+                    var prop = (string)Properties.Resources.ResourceManager.GetObject(resourceName);
+                    File.WriteAllText(fileName, prop);
+                }
                 //if (OptsEnable.Checked)
                 {
                     using (FileStream fs = new FileStream("msgBodySaveOpts.xml", FileMode.OpenOrCreate))

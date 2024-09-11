@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<ConfigObj xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <countNoise>50</countNoise>
+  <countRealization>40</countRealization>
+  <LdpcMatrix>12x24x27</LdpcMatrix>
+  <CountOfIterations>25</CountOfIterations>
+  <fld1>345</fld1>
+  <fld2>
+    <int>77</int>
+  </fld2>
+</ConfigObj>
