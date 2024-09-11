@@ -2,7 +2,6 @@ package com.ldpc.generator;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.IntStream;
 
 import static com.ldpc.utils.Utils.calculateVectorShift;
 import static com.ldpc.utils.Utils.createZeroVector;
@@ -28,8 +27,8 @@ public class Generator {
         this.codewordSize = codewordSize;
         this.codeRate = codewordSize / messageSize;
         this.ldpcMatrix = ldpcMatrix;
-        this.strings = strings = messageSize / blockSize;
         this.columns = codewordSize / blockSize;
+        this.strings = this.columns - messageSize / blockSize;
     }
 
     public void generateMessage() {
@@ -100,26 +99,22 @@ public class Generator {
 
         parities.add(0, parity0);
         parities.add(1, parity1);
-        parities.add(2, null);
-        parities.add(3, null);
-        parities.add(4, null);
-        parities.add(5, null);
-        parities.add(6, null);
-        parities.add(7, null);
-        parities.add(8, null);
-        parities.add(9, null);
-        parities.add(10, null);
+        for (int i = 2; i < strings - 1; i++) {
+            parities.add(i, new int[0]);
+        }
         parities.add(strings - 1, parityLast);
 
-        for (int i = 1; i < 5; i++) {
+        int tmp = strings / 2 - 1;
+        for (int i = 1; i < tmp; i++) {
             parities.set(i + 1, summVectorsModul2(lamdas[i], parities.get(i)));
         }
+        tmp++;
 
-        for (int i = strings - 2; i > 6; i--) {
+        for (int i = strings - 2; i > tmp; i--) {
             parities.set(i, summVectorsModul2(lamdas[i], parities.get(i + 1)));
         }
 
-        parities.set(6, summVectorsModul2(summVectorsModul2(lamdas[6], parities.get(0)), parities.get(7)));
+        parities.set(tmp, summVectorsModul2(summVectorsModul2(lamdas[tmp], parities.get(0)), parities.get(tmp + 1)));
 
         convertToCodeWord(parities);
 

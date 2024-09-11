@@ -5,28 +5,37 @@ import org.python.google.common.primitives.Doubles;
 import java.util.Arrays;
 
 public class SquareBlock {
-    static int blkSz = 27;
+    public static int blkSz;
     Double[] LoadedMessage;
     int shft;
     int str;
     int column;
+    Double[] DiagValues;
+
     public SquareBlock(int shft, int str, int column) {
 //        this.message = message;
         this.shft = shft;
         this.str = str;
         this.column = column;
-        LoadedMessage = new Double[blkSz ];
+        LoadedMessage = new Double[blkSz];
     }
 
     public void LoadElement(int k, double[] message) {
         int indx = (shft + k) % blkSz;
         LoadedMessage[k] = message[column * blkSz + indx];
     }
-    public double element(int k, double[] message) {
+    public double element(int k) {
         return LoadedMessage[k];
     }
 
-    Double[] DiagValues;
+    public void setArr(Double[] newLLR) {
+        this.DiagValues = newLLR;
+    }
+
+    public void setArrPosition(int position, Double newLLR) {
+        this.DiagValues[position] = newLLR;
+    }
+
     public Double[] GetArr() {
         if(DiagValues == null) {
             DiagValues = new Double[blkSz];

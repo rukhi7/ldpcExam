@@ -1,0 +1,21 @@
+﻿<Window x:Class="dipLdpc.ConfigFrm"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:wf="clr-namespace:System.Windows.Forms;assembly=System.Windows.Forms" 
+        Title="ConfigFrm" Height="450" Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="50"/>
+        </Grid.RowDefinitions>
+        <DockPanel Grid.Row="1">
+            <Button x:Name="SaveBtn" Content="Save" Click="SaveBtn_Click"/>
+        </DockPanel>
+        <WindowsFormsHost >
+            <!-- Ensure your .csproj file has <UseWindowsForms>true</UseWindowsForms> -->
+            <wf:PropertyGrid x:Name="propGrid2" SelectedObject="{x:Null}"/>
+        </WindowsFormsHost>
+    </Grid>
+</Window>

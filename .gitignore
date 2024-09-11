@@ -1,1 +1,11 @@
 *.class
+csharp/dipLdpc/WpfApp1/bin/
+csharp/dipLdpc/WpfApp1/obj/
+csharp/dipLdpc/WpfApp1/dipLdpc.csproj.user
+csharp/dipLdpc/.vs/dipLdpc/v16/.suo
+.idea/
+csharp/dipLdpc/.vs/
+csharp/dipLdpc/CustomControls/bin/
+csharp/dipLdpc/CustomControls/obj/
+csharp/dipLdpc/CustomControls/CustomControls.suo
+csharp/dipLdpc/CustomControls/CustomControls.csproj.user

@@ -1,5 +1,7 @@
 package com.ldpc.ruDecoder;
 
+import com.ldpc.decoder.QuantElement;
+
 import java.util.ArrayList;
 import java.util.List;
 import static com.ldpc.utils.Utils.*;
@@ -39,8 +41,8 @@ public class BelPropV1 {
         return shiftBlocks;
     }
 
-    public double[] decode() {
-
+    public double[] decode(int alg) {
+        SquareBlock.blkSz = blockSize;
         List<List<SquareBlock>> shiftBlocks = parseCodeWordToMatrix();
         LoadWordToTable(shiftBlocks);
         int iter = 0;
@@ -49,37 +51,16 @@ public class BelPropV1 {
 
         while (iter < iterations) {
 
-            List<List<SquareBlock>> newLLR = iterationOfBeliefPropagation(shiftBlocks);
-/*
-            List<List<Double[]>> testShift = parseCodeWordToMatrix();
-            List<List<Double[]>> test = new ArrayList<>(testShift);
-            for (int i = 0; i < test.size(); i++) {
-                int iterator = 0;
-                for (int j = 0; j < test.get(0).size(); j++) {
-                    if (test.get(i).get(j).length > 0) {
-                        for (int k = 0; k < test.get(i).get(j).length; k++) {
-                            test.get(i).get(j)[k] = newLLR.get(i).get(iterator)[k];
-                        }
-                    } else {
-                        iterator--;
-                    }
-                    iterator++;
-                }
-            }*/
+            List<List<SquareBlock>> newLLR = iterationOfBeliefPropagationClassic(shiftBlocks, alg);
 
             double[] summNewOldLLRs = summLLRsForOneVariable(newLLR);
 
-            //int[] sindrom1 = calculateSindromTEST(shiftBlocks, newLLR);
             int[] sindrom1 = calculateSindrom(shiftBlocks, summNewOldLLRs);
             correctedCodeWord = threshold(summNewOldLLRs);
             int[] sindrom = calculateSindrom(shiftBlocks, correctedCodeWord);
-//            correctedCodeWord = threshold(summNewOldLLRs);
-//            List<Integer> compare = compareBeforeAfter(message, correctedCodeWord);
-            List<Integer> compare = compareInts(sindrom, sindrom1);
-            System.out.println("Sindrom: " + checkToZero(sindrom));
+
+            int diffCount = compareInts(sindrom, sindrom1);
             if (checkToZero(sindrom)) {
-                System.out.println("Колличество итераций алгоритма: " + (iter + 1));
-                System.out.println("Выход из алгоритма по синдрому");
                 return correctedCodeWord;
             }
 //            break;
@@ -87,8 +68,8 @@ public class BelPropV1 {
             shiftBlocks = newLLR;
         }
 
-        System.out.println("Колличество итераций алгоритма: " + iter);
-        System.out.println("Выход из алгоритма по колличеству итерраций");
+        //System.out.println("Колличество итераций алгоритма: " + iter);
+        //System.out.println("Выход из алгоритма по колличеству итерраций");
         return correctedCodeWord;
 
     }
@@ -114,9 +95,9 @@ public class BelPropV1 {
                     int col = blk.GetCol();
                     mass = correctedCodeWord[shft + col * blockSize];
                     if (mass > 0) {
-                        ssum ^= 0;
-                    } else {
                         ssum ^= 1;
+                    } else {
+                        ssum ^= 0;
                     }
                 }
                 sindrom[k + i * blockSize] = ssum;
@@ -129,14 +110,13 @@ public class BelPropV1 {
         private double[] threshold(double[] l) {
         for (int i = 0; i < l.length; i++) {
             if (l[i] > 0) {
-                l[i] = 1;
-            } else {
                 l[i] = 0;
+            } else {
+                l[i] = 1;
             }
         }
         return l;
     }
-    static int statPrint = 0;
     private double[] summLLRsForOneVariable(List<List<SquareBlock>> newLLR) {
 
         double[] summ = new double[message.length];
@@ -151,15 +131,11 @@ public class BelPropV1 {
                         if(newLLR.get(k).size() > inLinePos ) {
                             if (newLLR.get(k).get(inLinePos).column == i) {
                                 xx += newLLR.get(k).get(inLinePos).GetRightVal(j); //GetArr()[j];
-                                /*if (statPrint == 0)
-                                {
-                                    double dbg = newLLR.get(k).get(inLinePos).GetRightVal(j);
-                                    System.out.println("Sum+: " + dbg);
-                                }*/
+
                             }
                         }
                 }
-                statPrint = 1;
+
                 xx += message[j + i * blockSize];
                 summ[j + i * blockSize] = xx;
                 for (int k = 0; k < newLLR.size(); k++) {
@@ -180,76 +156,109 @@ public class BelPropV1 {
                     }
             }
         }
-        /*Double[] vektor = newLLR.get(0).get(0).GetLoadedArr();
-        for (int l = 0; l < blockSize; l++) {
-            double dbg = vektor[l];
-            System.out.println("vSum+: " + dbg);
-        }*/
         return summ;
     }
-        private List<List<SquareBlock>> iterationOfBeliefPropagation(List<List<SquareBlock>> shiftBlocks) {
+
+    private List<List<SquareBlock>> iterationOfBeliefPropagationClassic(List<List<SquareBlock>> shiftBlocks, int alg) {
 
         for (int i = 0; i < shiftBlocks.size(); i++) {
             int j = 0;
-            //List<Double[]> newStringLLR = new ArrayList<>();
-            Double[] element = shiftBlocks.get(i).get(j).GetArr();
+            List<SquareBlock> line = shiftBlocks.get(i);
 
-            for (int k = 0; k < blockSize; k++) {
-                double newElementLLR = shiftBlocks.get(i).get(1).element(k, message);
-                for (int l = 2; l < shiftBlocks.get(i).size(); l++) {
-                    double yy = shiftBlocks.get(i).get(l).element(k, message);
-                    newElementLLR = Math.log((1 + Math.exp(newElementLLR + yy))
-                            / (Math.exp(newElementLLR) + Math.exp(yy)));
+
+            for (int m = 0; m < blockSize; m++) {
+
+                int lineSize = line.size();
+                int lSize = 3 * (lineSize - 2) - (lineSize - 4);
+                double[] ls = new double[lSize];
+                ls[0] = line.get(0).LoadedMessage[m];
+                ls[lSize / 2] = line.get(lineSize - 1).LoadedMessage[m];
+                Double[] newLLRs = new Double[lineSize];
+                for (int l = 1; l < lineSize - 1; l++) {
+                    ls[l] = coreOfIterationOptimize(line.get(l).element(m), ls[l - 1], alg);// coreOfIterationSign(line, m, l, l + 1, ls[l - 1], alg);
                 }
-                //newStringLLR.add(newElementLLR);
-                element[k] = newElementLLR;
-            }
-            for (j = 1; j < shiftBlocks.get(i).size(); j++) {
-                //List<Double[]> newStringLLR = new ArrayList<>();
-                element = shiftBlocks.get(i).get(j).GetArr();
+                int count = lSize / 2 - 1;
+                for (int l = lSize / 2 + 1; l < lSize; l++) {
+                    ls[l] = coreOfIterationOptimize(line.get(count).element(m), ls[l - 1], alg);
+                    count--;
+                }
+                newLLRs[0] = ls[lSize - 1];
+                newLLRs[lineSize - 1] = ls[lSize / 2 - 1];
 
-                for (int k = 0; k < blockSize; k++) {
-                    double newElementLLR = shiftBlocks.get(i).get(0).element(k, message);
-
-                    for (int l = 1; l < j; l++) {
-                        double yy = shiftBlocks.get(i).get(l).element(k, message);
-                        newElementLLR = Math.log((1 + Math.exp(newElementLLR + yy))
-                                / (Math.exp(newElementLLR) + Math.exp(yy)));
-                    }
-
-                    for (int l = j + 1; l < shiftBlocks.get(i).size(); l++) {
-                        double yy = shiftBlocks.get(i).get(l).element(k, message);
-                        newElementLLR = Math.log((1 + Math.exp(newElementLLR + yy))
-                                / (Math.exp(newElementLLR) + Math.exp(yy)));
-                    }
-                    //newStringLLR.add(newElementLLR);
-                    element[k] = newElementLLR;
+                for (int l = 1; l < lineSize - 1; l++) {
+                    newLLRs[l] = coreOfIterationOptimize(ls[lSize - (l + 1)], ls[l - 1], alg);
+                }
+                for (int y = 0; y < lineSize; y++) {
+                    line.get(y).GetArr();
+                    line.get(y).setArrPosition(m, newLLRs[y]);
                 }
             }
         }
         return shiftBlocks;
     }
+
+    private double coreOfIteration(double newElementLLR, double yy) {
+        return Math.log((1 + Math.exp(newElementLLR + yy))
+                / (Math.exp(newElementLLR) + Math.exp(yy)));
+    }
+
+    private double coreOfIterationOptimize(double one, double two, int alg) {
+        double result = 0;
+        if (alg == 0) {
+            result = Math.log((1 + Math.exp(one + two)) / (Math.exp(one) + Math.exp(two)));                  // SPA
+        }
+        if (alg == 1) {
+            result = Math.signum(one) * Math.signum(two) * Math.min(Math.abs(one), Math.abs(two));           // sign-min approx
+            //+ Math.log((1 + Math.exp(newElementLLR + yy))) - Math.log((Math.exp(newElementLLR) + Math.exp(yy)));
+        }
+        if (alg == 2) {
+            result = Math.max(0, one + two) - Math.max(one, two)                                             // table look-up
+                    + QuantElement.myLog(Math.abs(one + two)) - QuantElement.myLog(Math.abs(one - two));
+        }
+
+        return result;
+    }
+
+    private double coreOfIterationSign(List<SquareBlock> line, int k, int startIndex, int endIndx, double newElementLLR, int alg) {
+        for (int l = startIndex; l < endIndx; l++) {
+            double yy = line.get(l).element(k);
+            if (alg == 0) {
+                newElementLLR = Math.log((1 + Math.exp(newElementLLR + yy)) / (Math.exp(newElementLLR) + Math.exp(yy)));                  // SPA
+            }
+            if (alg == 1) {
+                newElementLLR = Math.signum(newElementLLR) * Math.signum(yy) * Math.min(Math.abs(newElementLLR), Math.abs(yy));           // sign-min approx
+                //+ Math.log((1 + Math.exp(newElementLLR + yy))) - Math.log((Math.exp(newElementLLR) + Math.exp(yy)));
+            }
+            if (alg == 2) {
+                newElementLLR = Math.max(0, newElementLLR + yy) - Math.max(newElementLLR, yy)                                             // table look-up
+                        + QuantElement.myLog(Math.abs(newElementLLR + yy)) - QuantElement.myLog(Math.abs(newElementLLR - yy));
+            }
+        }
+        return newElementLLR;
+    }
+
     private List<List<SquareBlock>> LoadWordToTable(List<List<SquareBlock>> shiftBlocks) {
 
         for (int i = 0; i < shiftBlocks.size(); i++) {
+            List<SquareBlock> line = shiftBlocks.get(i);
             int j = 0;
 
             for (int k = 0; k < blockSize; k++) {
-                shiftBlocks.get(i).get(1).LoadElement(k, message);
-                for (int l = 2; l < shiftBlocks.get(i).size(); l++) {
-                    shiftBlocks.get(i).get(l).LoadElement(k, message);
+                line.get(1).LoadElement(k, message);
+                for (int l = 2; l < line.size(); l++) {
+                    line.get(l).LoadElement(k, message);
                 }
             }
-            for (j = 1; j < shiftBlocks.get(i).size(); j++) {
+            for (j = 1; j < line.size(); j++) {
                 for (int k = 0; k < blockSize; k++) {
-                    shiftBlocks.get(i).get(0).LoadElement(k, message);
+                    line.get(0).LoadElement(k, message);
 
                     for (int l = 1; l < j; l++) {
-                        shiftBlocks.get(i).get(l).LoadElement(k, message);
+                        line.get(l).LoadElement(k, message);
                     }
 
-                    for (int l = j + 1; l < shiftBlocks.get(i).size(); l++) {
-                        shiftBlocks.get(i).get(l).LoadElement(k, message);
+                    for (int l = j + 1; l < line.size(); l++) {
+                        line.get(l).LoadElement(k, message);
                     }
                 }
             }

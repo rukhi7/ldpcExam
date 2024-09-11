@@ -1,7 +1,12 @@
 package com.ldpc.utils;
 
 import Jama.Matrix;
+import javazoom.jl.decoder.JavaLayerException;
+import javazoom.jl.player.Player;
+import sun.audio.AudioDevice;
 
+import javax.sound.sampled.*;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -27,8 +32,8 @@ public class Utils {
         str = str.replace('\n', ' ');
 
         String[] massString = str.split("\\ ");
-        int strings = messageSize / blockSize;
         int columns = codewordSize / blockSize;
+        int strings = columns - messageSize / blockSize;
         int[][] matrix = new int[strings][columns];
         int massLength = 0;
         for (int i = 0; i < strings; i++) {
@@ -68,7 +73,7 @@ public class Utils {
         for (int i = 0; i < positions; i++) {
             Double temp = result[size - 1];
             for (int j = size - 1; j > 0; j--) {
-                result[j] = result[j-1];
+                result[j] = result[j - 1];
             }
             result[0] = temp;
         }
@@ -163,16 +168,18 @@ public class Utils {
         }
         return compare;
     }
-    public static List<Integer> compareInts(int[] before, int[] after) {
-        List<Integer> compare = new ArrayList<>();
+
+    public static int compareInts(int[] before, int[] after) {
+        int diffCount = 0;
         for (int i = 0; i < before.length; i++) {
             if (before[i] == after[i]) {
                 continue;
             }
-            compare.add(i);
+            diffCount++;
         }
-        return compare;
+        return diffCount;
     }
+
     public static List<Integer> compareAfter(int[] before, double[] after) {
         List<Integer> compare = new ArrayList<>();
         double[] B = new double[before.length];
@@ -196,4 +203,67 @@ public class Utils {
         return compare;
     }
 
+    public static double arithmeticMeanOfArray(double[] mass, int count) {
+        double result = 0;
+        for (int i = 0; i < mass.length; i++) {
+            result = result + mass[i];
+        }
+        return result / count;
+    }
+
+    public static int arithmeticMeanOfArray(int[] mass, int count) {
+        int result = 0;
+        for (int i = 0; i < mass.length; i++) {
+            result = result + mass[i];
+        }
+        return result / count;
+    }
+
+    public static String convertMassive(double[] mass) {
+        String result = "";
+        for (double a : mass) {
+            result = result + a + ",";
+        }
+        result = result.substring(0, result.length() - 1);
+        return result;
+    }
+
+    public static String convertMassive(int[] mass) {
+        String result = "";
+        for (double a : mass) {
+            result = result + a + ",";
+        }
+        result = result.substring(0, result.length() - 1);
+        return result;
+    }
+
+    public static void soudPlay() throws FileNotFoundException, JavaLayerException {
+
+        FileInputStream fis = new FileInputStream("C:/Users/Asus/IdeaProjects/ldpc-diplom/src/main/resources/1.mp3");
+        Player playMP3 = new Player(fis);
+
+        playMP3.play();
+
+    }
+
+    public static void graphBuilder(String SNRString, String algSPA, String algSignMinApprox, String algTable,
+                                    String graph1Name, String graph2Name, String graph3Name, String diogramName) {
+        String[] cmd = {
+                "python",
+                "C:/Users/Asus/Downloads/pythonLDPC (3).py",
+                "-noize",       SNRString,
+                "-graph1",      algSPA,//algSPA,
+                "-graph2",      algSignMinApprox,//algSignMinApprox,
+                "-graph3",      algTable,//algTable
+                "-diogramName", diogramName,
+                "-graph1Name",  graph1Name,
+                "-graph2Name",  graph2Name,
+                "-graph3Name",  graph3Name
+        };
+        try {
+            Runtime.getRuntime().exec(cmd);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

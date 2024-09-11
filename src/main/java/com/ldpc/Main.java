@@ -1,136 +1,179 @@
 package com.ldpc;
 
 import com.ldpc.channel.Сhannel;
-import com.ldpc.decoder.BeliefPropagation;
-import com.ldpc.decoder.Decoder;
 import com.ldpc.generator.Generator;
 import com.ldpc.ruDecoder.BelPropV1;
+import javazoom.jl.decoder.JavaLayerException;
 
 import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
+import static com.ldpc.utils.MatrixConstants.*;
 import static com.ldpc.utils.Utils.*;
 
 
 public class Main {
 
     private static double AMPLITUDA = 1;
-    private static double STANDART_DEVIATION = 0.8;
+    private static double STANDART_DEVIATION = 1;
     private static int MAEN = 0;
 
-    public Main() throws IOException {
-    }
+    /*private static int BLOCK_SIZE = 27;
+    private static int MESSAGE_SIZE = 540;
+    private static int CODEWORD_SIZE = 648;*/
 
-    public static void main(String[] args) throws IOException {
-        String matrix = "0 - - - 0 0 - - 0 - - 0 1 0 - - - - - - - - - -\n" +
-                        "22 0 - - 17 - 0 0 12 - - - - 0 0 - - - - - - - - -\n" +
-                        "6 - 0 - 10 - - - 24 - 0 - - - 0 0 - - - - - - - -\n" +
-                        "2 - - 0 20 - - - 25 0 - - - - - 0 0 - - - - - - -\n" +
-                        "23 - - - 3 - - - 0 - 9 11 - - - - 0 0 - - - - - -\n" +
-                        "24 - 23 1 17 - 3 - 10 - - - - - - - - 0 0 - - - - -\n" +
-                        "25 - - - 8 - - - 7 18 - - 0 - - - - - 0 0 - - - -\n" +
-                        "13 24 - - 0 - 8 - 6 - - - - - - - - - - 0 0 - - -\n" +
-                        "7 20 - 16 22 10 - - 23 - - - - - - - - - - - 0 0 - -\n" +
-                        "11 - - - 19 - - - 13 - 3 17 - - - - - - - - - 0 0 -\n" +
-                        "25 - 8 - 23 18 - 14 9 - - - - - - - - - - - - - 0 0\n" +
-                        "3 - - - 16 - - 2 25 5 - - 1 - - - - - - - - - - 0";
+    private static int COUNT_APPROX = 1;
+    private static int COUNT_SIZE_CODEWORD = 3;
 
-        final int[][] standartMatrix = convertStandartMatrix(matrix, 324, 27, 648);
+    private static int countNoise = 20;
+    private static int countRealization = 1000;
+    private static double stepAmplitude = 0.025;
 
-        Generator generator = new Generator(standartMatrix, 27, 324, 648);
-        generator.generateMessage();
-        generator.parities();
-        int[] codeWord = generator.getCodeword();
+    public static void main(String[] args) throws IOException, JavaLayerException {
+
+        List<String> matrixes = new ArrayList<>();
+        matrixes.add(matrixF1Speed1);
+        matrixes.add(matrixF2Speed1);
+        matrixes.add(matrixF3Speed1);
+
+        String[] algSPAForDifferentSizes = new String[COUNT_SIZE_CODEWORD];
+        String SNRForDifferentSizes = new String();
+
+        for (int countCodeWord = 0; countCodeWord < COUNT_SIZE_CODEWORD; countCodeWord++) {
+
+            final int[][] standartMatrix = convertStandartMatrix(
+                    matrixes.get(countCodeWord), MESSAGE_SIZE_SPEED1[countCodeWord],
+                    BLOCK_SIZE_SPEED1[countCodeWord], CODEWORD_SIZE_SPEED1[countCodeWord]);
+
+            double currentAmplitude = AMPLITUDA;
+
+            int[] bitErrorRateBeforeDecodeNoise = new int[countNoise];
+            int[] bitErrorRateAfterDecodeNoise = new int[countNoise];
+            double[] SNRNoise = new double[countNoise];
+
+            int[] bitErrorRateBeforeDecodeRealization = new int[countRealization];
+            int[] bitErrorRateAfterDecodeRealization = new int[countRealization];
+
+            double[] bitErrorBefore = new double[countNoise];
+            double[] bitErrorAfter = new double[countNoise];
+
+            double[] packegErrorBefore = new double[countNoise];
+            double[] packegErrorAfter = new double[countNoise];
+
+            double[][] packegErrorAfterMass = new double[3][countNoise];
+
+            Date date = new Date();
+            SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+
+            Date[] times = new Date[COUNT_APPROX];
+            for (int countAlg = 0; countAlg < COUNT_APPROX; countAlg++) {
+                currentAmplitude = AMPLITUDA;
+                for (int i = 0; i < countNoise; i++) {
+                    SNRNoise[i] = 10 * Math.log10((currentAmplitude * currentAmplitude) / (STANDART_DEVIATION * STANDART_DEVIATION));
+                    for (int j = 0; j < countRealization; j++) {
+                        System.out.println("Alg: " + countAlg + ", countNoise: " + i + ", countRealization: " + j);
+                        Generator generator = new Generator(
+                                standartMatrix, BLOCK_SIZE_SPEED1[countCodeWord], MESSAGE_SIZE_SPEED1[countCodeWord], CODEWORD_SIZE_SPEED1[countCodeWord]);
+                        generator.generateMessage();
+                        generator.parities();
+                        int[] codeWord = generator.getCodeword();
 
 
-        Сhannel channel = new Сhannel(codeWord, AMPLITUDA, STANDART_DEVIATION, MAEN);
-        double[] LLR = channel.convertToLLR();
+                        Сhannel channel = new Сhannel(codeWord, currentAmplitude, STANDART_DEVIATION, MAEN);
+                        double[] LLR = channel.convertToLLR();
 
-        if(false) {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("codeWordDisp0.4.txt"));
-            for (int i = 0; i < codeWord.length; i++) {
-                writer.write(String.valueOf(codeWord[i]));
-                writer.write(",");
-            }
-            writer.close();
 
-            FileWriter writerLLRs = new FileWriter("LLRsDisp0.4.txt", false);
-            for (int i = 0; i < codeWord.length; i++) {
-                writerLLRs.write(String.valueOf(LLR[i]));
-                writerLLRs.write(",");
-            }
-            writerLLRs.close();
-        }
+                        List<Integer> compareBefore = compareBefore(codeWord, LLR);
+                        bitErrorBefore[i] = bitErrorBefore[i] + compareBefore.size();
+                        if (compareBefore.size() > 0) {
+                            packegErrorBefore[i] += 1;
+                        }
 
-        FileReader fr1 = new FileReader("codeWordDisp0.4.txt");
-        BufferedReader reader1 = new BufferedReader(fr1);
-        String line1 = null;
-        while ((line1 = reader1.readLine()) != null) {
-            int i = 0;
-            for (String s : line1.split(",")) {
-                codeWord[i] = Integer.parseInt(s);
-                i++;
-            }
-        }
-        fr1.close();
+                        bitErrorRateBeforeDecodeRealization[j] = compareBefore.size();
+                        //System.out.println("Ошибок ДО декодирования: " + compareBefore.size());
 
-        FileReader fr = new FileReader("LLRsDisp0.4.txt");
-            BufferedReader reader = new BufferedReader(fr);
-            String line = null;
-            while ((line = reader.readLine()) != null) {
-                int i = 0;
-                for (String s : line.split(",")) {
-                    LLR[i] = Double.parseDouble(s);
-                    i++;
+                        BelPropV1 beliefPropagation = new BelPropV1(LLR, standartMatrix, BLOCK_SIZE_SPEED1[countCodeWord], 25);
+
+                        List<Integer> compareAfter = compareAfter(codeWord, beliefPropagation.decode(countAlg));
+                        bitErrorAfter[i] = bitErrorAfter[i] + compareAfter.size();
+                        if (compareAfter.size() > 0) {
+                            packegErrorAfter[i] += 1;
+                        }
+
+                        bitErrorRateAfterDecodeRealization[j] = compareAfter.size();
+                        //System.out.println("break");
+
+                        //System.out.println("Ошибок ПОСЛЕ декодирования: " + compareAfter.size());
+                    }
+                    bitErrorBefore[i] = bitErrorBefore[i] / countRealization / CODEWORD_SIZE_SPEED1[countCodeWord];
+                    bitErrorAfter[i] = bitErrorAfter[i] / countRealization / CODEWORD_SIZE_SPEED1[countCodeWord];
+
+                    packegErrorBefore[i] = packegErrorBefore[i] / countRealization;
+                    packegErrorAfter[i] = packegErrorAfter[i] / countRealization;
+
+                    bitErrorRateBeforeDecodeNoise[i] = arithmeticMeanOfArray(bitErrorRateBeforeDecodeRealization, countRealization);
+                    bitErrorRateAfterDecodeNoise[i] = arithmeticMeanOfArray(bitErrorRateAfterDecodeRealization, countRealization);
+                    currentAmplitude = currentAmplitude + stepAmplitude;
                 }
+                for (int l = 0; l < countNoise; l++) {
+                    packegErrorAfterMass[countAlg][l] = packegErrorAfter[l];
+                }
+                times[countAlg] = new Date();
             }
-        fr.close();
+            Date date1 = new Date();
+            System.out.println("Время до: " + formatter.format(date));
+            System.out.println("Время работы первого алгоритма: " + formatter.format(times[0]));
+            //System.out.println("Время работы первого алгоритма: " + formatter.format(times[1]));
+            //System.out.println("Время работы первого алгоритма: " + formatter.format(times[2]));
+            System.out.println("Время после: " + formatter.format(date1));
+            ///////////////////////////////////////////////////////////
 
-        //List<Integer> compareBefore = channel.compareSignals();
-        List<Integer> compareBefore = compareBefore(codeWord, LLR);
-        System.out.println("Ошибок ДО декодирования: " + compareBefore.size());
+            String algSPA = convertMassive(packegErrorAfterMass[0]);
+            String algSignMinApprox = convertMassive(packegErrorAfterMass[1]);
+            String algTable = convertMassive(packegErrorAfterMass[2]);
+            //////////////////////////////////////////////////////////
 
-        boolean KoliKod = false;
-        List<Integer> compareAfter;
-        if(KoliKod) {
-            Decoder standart = new Decoder(standartMatrix, 20);
+            algSPAForDifferentSizes[countCodeWord] = algSPA;
 
-            BeliefPropagation beliefPropagation = new BeliefPropagation(LLR, standartMatrix, 27, 25);
+            String bitErrorRateBefore = convertMassive(bitErrorBefore);
+            String bitErrorRateAfter = convertMassive(bitErrorAfter);
 
-//            beliefPropagation.test(new int[]{0, 1, 0});
-            compareAfter = compareAfter(codeWord, beliefPropagation.decode());
+            String packegErrorRateBefore = convertMassive(packegErrorBefore);
+            String packegErrorRateAfter = convertMassive(packegErrorAfter);
+
+            String bitErrorRateBeforeDecodeString = convertMassive(bitErrorRateBeforeDecodeNoise);
+            String bitErrorRateAfterDecodeString = convertMassive(bitErrorRateAfterDecodeNoise);
+            String SNRString = convertMassive(SNRNoise);
+
+            SNRForDifferentSizes = SNRString;
+
         }
-        else
-        {//papa kod
-            {
-                Decoder standart = new Decoder(standartMatrix, 20);
 
-                BeliefPropagation beliefPropagation = new BeliefPropagation(LLR, standartMatrix, 27, 7);
+        graphBuilder(SNRForDifferentSizes, algSPAForDifferentSizes[0], algSPAForDifferentSizes[1], algSPAForDifferentSizes[2],
+                "648 bit", "1296 bit", "1944 bit", "rate 1/2");
 
-//            beliefPropagation.test(new int[]{0, 1, 0});
-                compareAfter = compareAfter(codeWord, beliefPropagation.decode());
-                System.out.println("Ошибок ПОСЛЕ декодирования: " + compareAfter.size());
-            }
-
-            BelPropV1 beliefPropagation = new BelPropV1(LLR, standartMatrix, 27, 7);
-
-//            beliefPropagation.test(new int[]{0, 1, 0});
-//            beliefPropagation.decode();
-            compareAfter = compareAfter(codeWord, beliefPropagation.decode());
-            System.out.println("break");
-        }
-        System.out.println("Ошибок ПОСЛЕ декодирования: " + compareAfter.size());
-
-
-        /*try(FileWriter writer = new FileWriter("codeWord.txt", false)) {
-            for (int i = 0; i < codeWord.length; i++) {
-                writer.write(String.valueOf(codeWord[i]));
-                writer.write(",");
-            }
-
+        soudPlay();
+       /* String[] cmd = {
+                "python",
+                "C:/Users/Asus/Downloads/pythonLDPC (3).py",
+                "-x",
+                SNRForDifferentSizes,
+                "-y",
+                algSPAForDifferentSizes[0],//algSPA,
+                "-y2",
+                algSPAForDifferentSizes[1],//algSignMinApprox,
+                "-y3",
+                algSPAForDifferentSizes[2],//algTable
+        };
+        try {
+            Runtime.getRuntime().exec(cmd);
         } catch (IOException e) {
             e.printStackTrace();
         }*/
+
     }
 
 }
