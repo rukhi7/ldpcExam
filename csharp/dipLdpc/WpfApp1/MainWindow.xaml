@@ -32,7 +32,7 @@
                                 <Setter Property="Margin" Value="3"/>
                             </Style>
                         </StackPanel.Resources>
-                        <Button x:Name="hbbRsErrBtn" IsEnabled="True" Content="RS Errs HBB"
+                        <Button x:Name="simpleGrTestBtn" IsEnabled="True" Content="simple Test"
                             Click="hbbRsErrBtn_Click"/>
 
                         <Button x:Name="CodeWordTest" IsEnabled="True" Content="CodeWord Test" Click="CodeWordTest_Click" />

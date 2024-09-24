@@ -1,6 +1,10 @@
-﻿using System;
+﻿using Microsoft.VisualBasic;
+using System;
 using System.IO;
+using System.IO.Pipes;
 using System.Runtime.InteropServices;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace dipLdpc
 {
@@ -77,9 +81,33 @@ namespace dipLdpc
 			var header = new WavHeader();
 			// Размер заголовка
 			var headerSize = Marshal.SizeOf(header);
+			var fileName = @"C:\audio\aac_audio.wav";
+            FileStream fileStream = null;
+            try
+			{
+				fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read);
+			}
+			catch(Exception ex)
+			{
+				string message;
+				string caption;
 
-			var fileStream = new FileStream(@"C:\audio\aac_audio.wav", FileMode.Open, FileAccess.Read);
-			var buffer = new byte[headerSize];
+                if (ex.HResult < 0)
+				{
+                    message = $"hardcoded file {fileName} doesn't exist!";
+                    caption = "File access error";
+				}
+				else
+				{
+                    message = $"uknown error while opening hardcoded file {fileName}";
+                    caption = "File access error";
+                }
+                MessageBoxButtons buttons = MessageBoxButtons.OK;
+                System.Windows.Forms.MessageBox.Show(message, caption, buttons);
+				return;
+
+            }
+            var buffer = new byte[headerSize];
 			fileStream.Read(buffer, 0, headerSize);
 
 			// Чтобы не считывать каждое значение заголовка по отдельности,
